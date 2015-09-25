@@ -9,7 +9,7 @@
 //! Implement a thread safe multiple consumer/producer queue (using mutexes)
 //! @tparam T The underlying type the queue store;
 //! @tparam CONTAINER The underlying container
-template<typename T, typename CONTAINER = std::queue>
+template<typename T, class CONTAINER = std::queue<T>>
 class ConcurrencyQueue {
  public:
   //! ConcurrencyQueue constructor
@@ -60,7 +60,7 @@ class ConcurrencyQueue {
   }
 
  private:
-  CONTAINER<T> _queue;  //! The container
+  CONTAINER _queue;  //! The container
   std::mutex _mutex;  //! The mutex to share ressources
   std::condition_variable _cond;  //! The cond var to wait until somethin is on the queue
 };
