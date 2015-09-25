@@ -16,12 +16,12 @@
 //! An helper function to set the value on a promise even if a function return void
 template<typename RET, typename F, typename... Types>
 inline void promise_set_value(std::promise<RET>& p, F& f, Types&&... ts) {
-  p.set_value(f(std::forward<Types>(ts)...));
+  p.set_value(f(std::forward<Types&&>(ts)...));
 }
 
 template<typename F, typename... Types>
 inline void promise_set_value(std::promise<void>& p, F& f, Types&&... ts) {
-  f(std::forward<Types>(ts)...);
+  f(std::forward<Types&&>(ts)...);
   p.set_value();
 }
 
@@ -88,6 +88,12 @@ class Concurrent {
     auto nTuple = std::forward_as_tuple(ts...);
     std::swap(_t, nTuple);
     return nTuple;
+  }
+
+  //! Get the shared ressources
+  //! @return The ressources as a tuple
+  const std::tuple<Types...>& getSharedRessource() const {
+    return _t;
   }
 
  private:
