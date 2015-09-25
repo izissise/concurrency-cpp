@@ -11,21 +11,34 @@
 
 #include "ConcurrencyQueue.hpp"
 
-template<typename RET, typename F, typename T>
-inline void promise_set_value(std::promise<RET>& p, F& f, T& t) {
-  p.set_value(f(t));
+template<typename RET, typename F, typename... Types>
+inline void promise_set_value(std::promise<RET>& p, F& f, Types&&... ts) {
+  p.set_value(f(std::forward<Types>(ts)...));
 }
 
-template<typename F, typename T>
-inline void promise_set_value(std::promise<void>& p, F& f, T& t) {
-  f(t);
+template<typename F, typename... Types>
+inline void promise_set_value(std::promise<void>& p, F& f, Types&&... ts) {
+  f(std::forward<Types>(ts)...);
   p.set_value();
 }
 
-template<class T>
+template<typename RET, typename F, typename Tuple>
+inline void promise_set_value(std::promise<RET>& p, F& f, Tuple&& t) {
+  p.set_value(apply_tuple(f, t));
+}
+
+template<typename F, typename Tuple>
+inline void promise_set_value(std::promise<void>& p, F& f, Tuple&& t) {
+  apply_tuple(f, t);
+  p.set_value();
+}
+
+template<class... Types>
 class Concurrent {
  public:
-  explicit Concurrent(T t = T{}) : _done(false), _t(t), _thread([this]() {
+  explicit Concurrent(Types&&... ts) : _done(false),
+  _t(std::forward_as_tuple(ts...)),
+  _thread([this]() {
   while (!_done) {
     _queue.pop()();
   }}) {
@@ -36,24 +49,36 @@ class Concurrent {
     _thread.join();
   }
 
-  template<typename F, typename RET = typename std::result_of<F(T)>::type>
+  template<typename F,
+  typename RET = typename std::result_of<F(Types...)>::type,
+  int ...I>
   auto operator()(F f) -> std::future<RET> {
     auto promise = std::make_shared<std::promise<RET>>();
     auto future = promise->get_future();
 
     _queue.push([this, f, promise](){
+      auto& p = *promise;
       try {
-        promise_set_value(*promise, f, _t);
+        promise_set_value(p, f, _t);
       } catch (...) {
-        promise->set_exception(std::current_exception());
+        p.set_exception(std::current_exception());
       }
     });
     return future;
   }
 
+  //! Set the new shared ressources
+  //! @param ts The ressources
+  //! @return The previous ressources as a tuple
+  std::tuple<Types...> setSharedRessource(Types&&... ts) {
+    auto nTuple = std::forward_as_tuple(ts...);
+    std::swap(_t, nTuple);
+    return nTuple;
+  }
+
  private:
   bool _done;
-  T _t;
+  std::tuple<Types...> _t;
   ConcurrencyQueue<std::function<void()>> _queue;
   std::thread _thread;
 };
