@@ -1,4 +1,5 @@
 // Taken from https://www.preney.ca/paul/archives/486
+// In the future use std:;apply -> http://en.cppreference.com/w/cpp/experimental/apply
 
 #ifndef __TUPLEAPPLY__
 #define __TUPLEAPPLY__
