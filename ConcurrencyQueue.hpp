@@ -6,12 +6,20 @@
 #include <queue>
 #include <thread>
 
-template <typename T>
+//! Implement a thread safe multiple consumer/producer queue (using mutexes)
+//! @tparam T The underlying type the queue store;
+//! @tparam CONTAINER The underlying container
+template<typename T, typename CONTAINER = std::queue>
 class ConcurrencyQueue {
  public:
+  //! ConcurrencyQueue constructor
   ConcurrencyQueue() = default;
+
+  //! ConcurrencyQueue destructor
   ~ConcurrencyQueue() = default;
 
+  //! Wait until an element is in the queue
+  //! @return The elements at the top of the queue
   T pop() {
     std::unique_lock<std::mutex> mlock(_mutex);
     while (_queue.empty()) {
@@ -22,6 +30,8 @@ class ConcurrencyQueue {
     return item;
   }
 
+  //! Wait until an element is in the queue
+  //! @param item A reference on the object that will stock the top element
   void pop(T& item) {
     std::unique_lock<std::mutex> mlock(_mutex);
     while (_queue.empty()) {
@@ -31,6 +41,8 @@ class ConcurrencyQueue {
     _queue.pop();
   }
 
+  //! Push an element in the queue
+  //! @param item The element to push in the queue
   void push(const T& item) {
     std::unique_lock<std::mutex> mlock(_mutex);
     _queue.push(item);
@@ -38,6 +50,8 @@ class ConcurrencyQueue {
     _cond.notify_one();
   }
 
+  //! Push an element in the queue but with move semantic
+  //! @param item The element to push in the queue
   void push(T&& item) {
     std::unique_lock<std::mutex> mlock(_mutex);
     _queue.push(std::move(item));
@@ -46,9 +60,9 @@ class ConcurrencyQueue {
   }
 
  private:
-  std::queue<T> _queue;
-  std::mutex _mutex;
-  std::condition_variable _cond;
+  CONTAINER<T> _queue;  //! The container
+  std::mutex _mutex;  //! The mutex to share ressources
+  std::condition_variable _cond;  //! The cond var to wait until somethin is on the queue
 };
 
 #endif
